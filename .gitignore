@@ -192,3 +192,16 @@ __pycache__/
 # System / editor files
 .DS_Store
 Thumbs.db
+
+# --- Training artifacts / model weights ---
+*.pt
+runs/
+
+# Keep the models folder but ignore weights
+backend/models/*
+!backend/models/.keep
+
+# Local testing or debugging scripts
+test_model_local.py
+local_*.py
+*_dev.py
