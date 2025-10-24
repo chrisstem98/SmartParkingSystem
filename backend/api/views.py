@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from django.http import JsonResponse
+from django.views import View
 
-# Create your views here.
+class UploadImageView(View):
+    def post(self, request, *args, **kwargs):
+        return JsonResponse({"message": "API working correctly!"})
+    
+    def get(self, request, *args, **kwargs):
+        return JsonResponse({"message": "GET method test OK"})
