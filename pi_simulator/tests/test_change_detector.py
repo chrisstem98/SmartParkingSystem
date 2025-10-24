@@ -23,10 +23,10 @@ if len(images) < 2:
     raise SystemExit(" Need at least 2 images to test change detector.")
 
 img1_path = images[0]
-img2_path = images[1]
+img2_path = images[100]
 
 # --- visualize (optional) ---
-print(f"Comparing:\n 1 {os.path.basename(img1_path)}\n 2️⃣ {os.path.basename(img2_path)}")
+print(f"Comparing:\n 1 {os.path.basename(img1_path)}\n 2 {os.path.basename(img2_path)}")
 
 
 detector = ChangeDetector(threshold=0.9)
