@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .yolo_service_detector import YoloServiceDetector as YoloService
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+#@method_decorator(csrf_exempt, name='dispatch')For testing purposes, disable CSRF. 
 class UploadImageView(View):
     """API endpoint to receive image from Pi and run YOLO inference."""
 
