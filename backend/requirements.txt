@@ -1,5 +1,26 @@
-Django==5.0.4
+# === Django & API Framework ===
+django==5.2.7
+djangorestframework==3.15.2
+
+# === Database ===
 psycopg2-binary==2.9.9
-gunicorn==21.2.0
-minio==7.2.8
-django-storages==1.14.4
+
+# === Object Storage (MinIO) ===
+minio==7.2.7
+
+# === YOLOv8 (Ultralytics) ===
+ultralytics==8.3.19
+
+# === Image Processing ===
+opencv-python==4.10.0.84
+Pillow==10.3.0
+scikit-image==0.24.0   # για SSIM / change detection
+
+# === Utilities ===
+requests==2.32.3
+numpy==1.26.4
+torch>=2.1.0  # εγκαθίσταται αυτόματα με ultralytics αλλά το βάζουμε για σιγουριά
+
+# === Development tools ===
+black==24.8.0
+isort==5.13.2

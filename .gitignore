@@ -205,3 +205,7 @@ backend/models/*
 test_model_local.py
 local_*.py
 *_dev.py
+
+# Ignore uploads and YOLO outputs
+media/
+runs/
