@@ -209,3 +209,7 @@ local_*.py
 # Ignore uploads and YOLO outputs
 media/
 runs/
+
+# ---- Django Migrations ----
+# Keep migration files but ignore pycache
+*/migrations/__pycache__/
