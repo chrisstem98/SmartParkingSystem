@@ -1,8 +1,14 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LiveView from "./pages/LiveView";
+
 function App() {
   return (
-    <div className="text-center p-8 bg-blue-100 text-blue-800 text-3xl font-bold">
-      🚗 Tailwind is working perfectly!
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/live" element={<LiveView />} />
+        <Route path="/" element={<div className="p-6 text-2xl">Welcome to Smart Parking Dashboard</div>} />
+      </Routes>
+    </Router>
   );
 }
 
