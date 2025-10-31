@@ -1,47 +1,67 @@
 from django.http import JsonResponse
 from django.views import View
-from .models import ParkingSnapshot
+from django.db.models import Q
+from PIL import Image
+import os
+
+from django.conf import settings
+from .models import ParkingDetection
 
 
 class ParkingHeatmapView(View):
     """
-    Returns aggregated data useful for heatmap visualization.
-    This version computes frequency of occupied vs empty detections over time.
+    Builds a heatmap overlay based on YOLO detections stored in ParkingDetection.
+    Converts normalized coordinates to pixel positions on a base image.
     """
 
+    BASE_IMAGE_REL = "media/parking_layout.jpg"  # base background image for visualization
+
     def get(self, request, *args, **kwargs):
-        snapshots = ParkingSnapshot.objects.all()
-        total_snapshots = snapshots.count()
+        # --- Optional filters ---
+        cls_filter = request.GET.get("cls")  # 'occupied', 'empty', or None
+        start = request.GET.get("start")
+        end = request.GET.get("end")
 
-        if total_snapshots == 0:
-            return JsonResponse({
-                "total_snapshots": 0,
-                "heatmap_data": []
-            }, status=200)
+        qs = ParkingDetection.objects.all()
 
-        # Create aggregated metrics (no real coordinates)
-        # Here we simply calculate the average occupancy rate per image name
-        occupancy_dict = {}
+        if cls_filter in ("occupied", "empty"):
+            qs = qs.filter(cls_name=cls_filter)
 
-        for s in snapshots:
-            name = s.image_name
-            rate = s.occupied_count / max((s.empty_count + s.occupied_count), 1)
-            if name not in occupancy_dict:
-                occupancy_dict[name] = []
-            occupancy_dict[name].append(rate)
+        if start and end:
+            qs = qs.filter(created_at__date__range=[start, end])
 
-        heatmap_data = []
-        for name, rates in occupancy_dict.items():
-            avg_rate = round(sum(rates) / len(rates), 3)
-            heatmap_data.append({
-                "image_name": name,
-                "avg_occupancy": avg_rate
+        # --- Load base image for pixel scaling ---
+        base_path = os.path.join(settings.BASE_DIR, self.BASE_IMAGE_REL)
+        if not os.path.exists(base_path):
+            return JsonResponse(
+                {"error": f"Base image not found at {self.BASE_IMAGE_REL}"},
+                status=500,
+            )
+
+        with Image.open(base_path) as im:
+            base_w, base_h = im.size
+
+        # --- Convert normalized YOLO coordinates to pixel positions ---
+        points = []
+        for d in qs.iterator():
+            x = int(d.cx_norm * base_w)
+            y = int(d.cy_norm * base_h)
+
+            # Weight value based on detection type and confidence
+            if d.cls_name == "occupied":
+                val = max(0.05, min(1.0, d.conf))
+            else:
+                val = max(0.01, min(0.3, 0.1 * d.conf))
+
+            points.append({
+                "x": x,
+                "y": y,
+                "value": round(val, 3)
             })
 
-        # Sort by occupancy (most occupied first)
-        heatmap_data.sort(key=lambda x: x["avg_occupancy"], reverse=True)
-
+        # --- Response ---
         return JsonResponse({
-            "total_snapshots": total_snapshots,
-            "heatmap_data": heatmap_data[:20]  # limit to top 20 entries
+            "base_image": f"/{self.BASE_IMAGE_REL}",
+            "max_value": 1.0,
+            "points": points[:5000]  # Limit to avoid large payloads
         }, status=200)
