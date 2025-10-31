@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import LiveView from "./pages/LiveView";
 import Statistics from "./pages/Statistics";
+import HeatmapGrid from "./components/HeatmapGrid";
 
 function Home() {
   return (
@@ -20,7 +21,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/live" element={<LiveView />} />
         <Route path="/stats" element={<Statistics />} />
-        <Route path="/heatmap" element={<div className="p-6 text-xl">Heatmap coming soon...</div>} />
+        <Route path="/heatmap" element={<HeatmapGrid/>} />
         <Route path="/reservations" element={<div className="p-6 text-xl"> Reservation demo coming soon...</div>} />
       </Routes>
     </Router>
