@@ -1,1 +1,9 @@
-First try commiting in Repo
+docker compose exec backend bash
+
+python manage.py shell
+
+from api.models import ParkingLot
+
+ParkingLot.objects.get_or_create(code="UFPR04", defaults={"name": "UFPR Lot 04"})
+ParkingLot.objects.get_or_create(code="UFPR05", defaults={"name": "UFPR Lot 05"})
+ParkingLot.objects.get_or_create(code="PUCPR",  defaults={"name": "PUCPR Lot"})

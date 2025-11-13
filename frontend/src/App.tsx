@@ -2,13 +2,12 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import LiveView from "./pages/LiveView";
 import Statistics from "./pages/Statistics";
-import HeatmapGrid from "./components/HeatmapGrid";
+import HeatmapPage from "./pages/HeatmapPage";
 
 function Home() {
   return (
     <div className="p-6 text-center text-2xl">
-       Welcome to <strong>Smart Parking Dashboard</strong>
-      <p className="text-gray-500 mt-2"></p>
+      Welcome to <strong>Smart Parking Dashboard</strong>
     </div>
   );
 }
@@ -21,8 +20,10 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/live" element={<LiveView />} />
         <Route path="/stats" element={<Statistics />} />
-        <Route path="/heatmap" element={<HeatmapGrid/>} />
-        <Route path="/reservations" element={<div className="p-6 text-xl"> Reservation demo coming soon...</div>} />
+        <Route path="/heatmap" element={<HeatmapPage />} />
+        <Route path="/reservations" element={<div className="p-6 text-xl">
+            Reservation demo coming soon...
+        </div>} />
       </Routes>
     </Router>
   );

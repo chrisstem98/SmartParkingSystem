@@ -4,7 +4,7 @@ from .views_snapshot import ParkingSnapshotListView
 from .views_stats import ParkingStatsView
 from .views_heatmap import ParkingHeatmapView
 from .views_live import ParkingLiveView
-
+from .views_lot import ParkingLotsView
 
 urlpatterns = [
     path('upload-image/', UploadImageView.as_view(), name='upload-image'),
@@ -12,4 +12,5 @@ urlpatterns = [
     path('stats/', ParkingStatsView.as_view(), name='parking_stats'),
     path('heatmap/', ParkingHeatmapView.as_view(), name='parking_heatmap'),
     path('live/', ParkingLiveView.as_view(), name='parking_live'),
+    path("parking-lots/", ParkingLotsView.as_view(), name="parking-lots")
 ]

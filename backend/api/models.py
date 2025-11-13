@@ -57,5 +57,5 @@ class ParkingDetection(models.Model):
     h = models.IntegerField()                            # pixel height of bbox
 
     def __str__(self):
-        return f"{self.lot.code} | {self.cls} @{self.x},{self.y} conf={self.confidence:.2f}"
+        return f"{self.lot.code} | {self.cls_name} @{self.x},{self.y} conf={self.confidence:.2f}"
 # End of backend/api/models.py
