@@ -1,25 +1,61 @@
+# backend/api/models.py
 from django.db import models
 
+class ParkingLot(models.Model):
+    """
+    Represents a physical parking site (e.g., UFPR04, UFPR05, PUCPR).
+    We keep a short 'code' for API queries and an optional base image
+    to draw heatmaps on top of.
+    """
+    code = models.CharField(max_length=50, unique=True)  # short ID used in URLs, e.g., "UFPR04"
+    name = models.CharField(max_length=120)              # human readable name
+    base_image = models.ImageField(                      # optional background image for heatmap overlay
+        upload_to='layouts/', blank=True, null=True
+    )
+
+    def __str__(self):
+        return self.code
+
+
 class ParkingSnapshot(models.Model):
-    image_name = models.CharField(max_length=255)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    empty_count = models.IntegerField(default=0)
-    occupied_count = models.IntegerField(default=0)
-    annotated_image = models.CharField(max_length=255, blank=True, null=True)
-  
+    """
+    One upload/inference event: the annotated result plus global counts.
+    It belongs to a specific ParkingLot.
+    """
+    lot = models.ForeignKey(                             # link snapshot to a parking site
+        ParkingLot, on_delete=models.CASCADE, related_name='snapshots'
+    )
+    image_name = models.CharField(max_length=255)        # original uploaded filename
+    timestamp = models.DateTimeField(auto_now_add=True)  # when it was created
+    empty_count = models.IntegerField(default=0)         # how many 'empty' detections
+    occupied_count = models.IntegerField(default=0)      # how many 'occupied' detections
+    annotated_image = models.CharField(                  # stored filename for annotated JPG (not full path)
+        max_length=255, blank=True, null=True
+    )
+
+    def __str__(self):
+        return f"{self.lot.code} | {self.image_name} @ {self.timestamp:%Y-%m-%d %H:%M:%S}"
+
 
 class ParkingDetection(models.Model):
-    snapshot = models.ForeignKey(ParkingSnapshot, on_delete=models.CASCADE, related_name="detections")
-    cls_name = models.CharField(max_length=32)        # 'empty' ή 'occupied'
-    conf = models.FloatField(default=0.0)             # confidence 0..1
-    cx_norm = models.FloatField()                     # center_x / img_w  (0..1)
-    cy_norm = models.FloatField()                     # center_y / img_h  (0..1)
-    w_norm = models.FloatField(null=True, blank=True) # optional: width/img_w
-    h_norm = models.FloatField(null=True, blank=True) # optional: height/img_h
-    created_at = models.DateTimeField(auto_now_add=True)
+    """
+    One bounding box detection that belongs to a snapshot (and thus to a lot).
+    We store class, confidence and pixel bbox; (x, y) can be box center or top-left
+    as long as we are consistent on read/write.
+    """
+    lot = models.ForeignKey(                             # denormalized link to lot for fast filtering
+        ParkingLot, on_delete=models.CASCADE, related_name='detections'
+    )
+    snapshot = models.ForeignKey(                        # each detection belongs to a snapshot
+        ParkingSnapshot, on_delete=models.CASCADE, related_name='detections'
+    )
+    cls_name = models.CharField(max_length=32)                # "empty" or "occupied"
+    confidence = models.FloatField(default=1.0)
+    x = models.IntegerField()                            # pixel x (we’ll use box center)
+    y = models.IntegerField()                            # pixel y (we’ll use box center)
+    w = models.IntegerField()                            # pixel width of bbox
+    h = models.IntegerField()                            # pixel height of bbox
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["created_at"]),
-            models.Index(fields=["cls_name"]),
-        ]
+    def __str__(self):
+        return f"{self.lot.code} | {self.cls} @{self.x},{self.y} conf={self.confidence:.2f}"
+# End of backend/api/models.py

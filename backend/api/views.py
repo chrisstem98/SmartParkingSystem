@@ -1,118 +1,99 @@
 import os
 from django.http import JsonResponse
 from django.views import View
-from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
+from django.conf import settings
 
-from .yolo_service_detector import YoloServiceDetector as YoloService
-from .models import ParkingSnapshot, ParkingDetection
+from .models import ParkingLot, ParkingSnapshot, ParkingDetection
+from .yolo_service_detector import YoloServiceDetector
 
-
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(csrf_exempt, name='dispatch')
 class UploadImageView(View):
-    """
-    API endpoint:
-      - Receives image from Pi simulator
-      - Runs YOLO inference
-      - Saves annotated image (locally or to MinIO)
-      - Stores detections and counts in the database
-    """
 
     def post(self, request, *args, **kwargs):
+
         try:
-            # 1️⃣ Validate uploaded image
+            # 1) Validate site code
+            site = request.GET.get("site")
+            if not site:
+                return JsonResponse({"error": "Missing ?site=UFPR04"}, status=400)
+
+            try:
+                lot = ParkingLot.objects.get(code=site)
+            except ParkingLot.DoesNotExist:
+                return JsonResponse({"error": f"Unknown site: {site}"}, status=404)
+
+            # 2) Validate image
             if "image" not in request.FILES:
                 return JsonResponse({"error": "No image provided"}, status=400)
 
             image_file = request.FILES["image"]
 
-            # 2️⃣ Save temporarily for YOLO inference
+            # Save temp
             temp_dir = os.path.join(settings.MEDIA_ROOT, "temp")
             os.makedirs(temp_dir, exist_ok=True)
+
             temp_path = os.path.join(temp_dir, image_file.name)
-            with open(temp_path, "wb+") as dest:
+            with open(temp_path, "wb+") as f:
                 for chunk in image_file.chunks():
-                    dest.write(chunk)
+                    f.write(chunk)
 
-            # 3️⃣ Run YOLO detection
+            # 3) YOLO inference
             model_path = os.path.join(settings.BASE_DIR, "models/best.pt")
-            yolo = YoloService(model_path)
+            yolo = YoloServiceDetector(model_path)
+
             result = yolo.analyze_image(temp_path)
-
             counts = result["counts"]
+            detections = result["detections"]
             annotated_path = result["annotated_path"]
-            detections = result.get("detections", [])
 
-            # 4️⃣ Save annotated image
-            if getattr(settings, "USE_S3", False):
-                # Upload to MinIO/S3
-                with open(annotated_path, "rb") as f:
-                    file_name = os.path.basename(annotated_path)
-                    default_storage.save(file_name, ContentFile(f.read()))
+            # 4) Move annotated image to MEDIA/results/<lot>/
+            lot_results_dir = os.path.join(settings.MEDIA_ROOT, "results", lot.code)
+            os.makedirs(lot_results_dir, exist_ok=True)
 
-                annotated_url = (
-                    f"{settings.MINIO_PUBLIC_ENDPOINT}/"
-                    f"{settings.AWS_STORAGE_BUCKET_NAME}/{file_name}"
-                )
-            else:
-                # Save locally under MEDIA_ROOT/results/
-                results_dir = os.path.join(settings.MEDIA_ROOT, "results")
-                os.makedirs(results_dir, exist_ok=True)
+            final_annotated = os.path.join(lot_results_dir, image_file.name)
 
-                file_name = os.path.basename(annotated_path)
-                final_path = os.path.join(results_dir, file_name)
+            os.replace(annotated_path, final_annotated)
 
-                os.replace(annotated_path, final_path)
-
-                annotated_url = request.build_absolute_uri(
-                    os.path.join(settings.MEDIA_URL, "results", file_name)
-                )
-
-            # 5️⃣ Create ParkingSnapshot entry
-            snapshot = ParkingSnapshot.objects.create(
-                image_name=image_file.name,
-                empty_count=counts.get("empty", 0),
-                occupied_count=counts.get("occupied", 0),
-                annotated_image=file_name,
+            annotated_url = request.build_absolute_uri(
+                f"{settings.MEDIA_URL}results/{lot.code}/{image_file.name}"
             )
 
-            # 6️⃣ Save YOLO detections
-            det_rows = []
+            # 5) Save Snapshot
+            snapshot = ParkingSnapshot.objects.create(
+                lot=lot,
+                image_name=image_file.name,
+                empty_count=counts["empty"],
+                occupied_count=counts["occupied"],
+                annotated_image=image_file.name
+            )
+
+            # 6) Save detections one-by-one
             for d in detections:
-                det_rows.append(
-                    ParkingDetection(
-                        snapshot=snapshot,
-                        cls_name=d["cls_name"],
-                        conf=d["conf"],
-                        cx_norm=d["cx_norm"],
-                        cy_norm=d["cy_norm"],
-                        w_norm=d.get("w_norm"),
-                        h_norm=d.get("h_norm"),
-                    )
+                ParkingDetection.objects.create(
+                    lot=lot,
+                    snapshot=snapshot,
+                    cls_name=d["cls_name"],
+                    confidence=d["confidence"],
+                    x=d["x"],
+                    y=d["y"],
+                    w=d["w"],
+                    h=d["h"]
                 )
 
-            if det_rows:
-                ParkingDetection.objects.bulk_create(det_rows)
-
-            # 7️⃣ Clean up temp file
+            # 7) Cleanup temp
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
-            # ✅ Response
-            return JsonResponse(
-                {
-                    "status": "ok",
-                    "filename": file_name,
-                    "empty": counts.get("empty", 0),
-                    "occupied": counts.get("occupied", 0),
-                    "detections_saved": len(det_rows),
-                    "annotated_url": annotated_url,
-                },
-                status=200,
-            )
+            return JsonResponse({
+                "status": "ok",
+                "site": lot.code,
+                "snapshot_id": snapshot.id,
+                "counts": counts,
+                "annotated_url": annotated_url,
+            }, status=200)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+# End of backend/api/views.py
