@@ -50,8 +50,6 @@ class ParkingLiveView(View):
             f"{settings.MEDIA_URL}results/{lot.code}/{latest.annotated_image}"
         )
 
-        # (Optional) if θέλεις και το original (μη annotated) image_url, μπορείς
-        # να το προσθέσεις αργότερα.
 
         # 5) Return JSON payload used by LiveView.tsx
         data = {
