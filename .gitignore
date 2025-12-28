@@ -213,3 +213,6 @@ runs/
 # ---- Django Migrations ----
 # Keep migration files but ignore pycache
 */migrations/__pycache__/
+
+# ignore env files in mobile app
+smartparking-mobile/src/config/env.ts
