@@ -1,5 +1,6 @@
 # backend/api/models.py
 from django.db import models
+from django.utils import timezone
 
 class ParkingLot(models.Model):
     """
@@ -58,4 +59,60 @@ class ParkingDetection(models.Model):
 
     def __str__(self):
         return f"{self.lot.code} | {self.cls_name} @{self.x},{self.y} conf={self.confidence:.2f}"
+    
+class Reservation(models.Model):
+    """
+    Reservation made from a mobile device for a parking lot.
+    MVP version: device-based (no authentication).
+    """
+
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_CANCELLED = "CANCELLED"
+    STATUS_EXPIRED = "EXPIRED"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_EXPIRED, "Expired"),
+    ]
+
+    lot = models.ForeignKey(
+        "ParkingLot",
+        on_delete=models.CASCADE,
+        related_name="reservations",
+    )
+
+    device_id = models.CharField(
+        max_length=64,
+        help_text="Unique identifier of the mobile device",
+    )
+
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["device_id"]),
+            models.Index(fields=["lot", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.lot.code} | {self.device_id} | {self.status}"
+
+    def is_active(self):
+        """Check if reservation is currently active."""
+        now = timezone.now()
+        return (
+            self.status == self.STATUS_ACTIVE
+            and self.start_time <= now <= self.end_time
+        )
 # End of backend/api/models.py
