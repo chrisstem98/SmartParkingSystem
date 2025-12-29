@@ -215,4 +215,4 @@ runs/
 */migrations/__pycache__/
 
 # ignore env files in mobile app
-smartparking-mobile/src/config/env.ts
+#smartparking-mobile/src/config/env.ts
