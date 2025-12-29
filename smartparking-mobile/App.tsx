@@ -1,5 +1,11 @@
-import LiveScreen from "./src/screens/LiveScreen";
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import RootTabs from "./src/navigation/RootTabs";
 
 export default function App() {
-  return <LiveScreen />;
+  return (
+    <NavigationContainer>
+      <RootTabs />
+    </NavigationContainer>
+  );
 }
