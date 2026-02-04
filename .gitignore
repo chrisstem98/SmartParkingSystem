@@ -216,3 +216,6 @@ runs/
 
 # ignore env files in mobile app
 #smartparking-mobile/src/config/env.ts
+pi_simulator/UFPR04/images/
+pi_simulator/UFPR05/images/
+pi_simulator/PUCPR/images/
